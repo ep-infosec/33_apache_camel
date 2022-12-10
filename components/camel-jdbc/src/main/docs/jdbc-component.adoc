@@ -1,0 +1,250 @@
+= JDBC Component
+:doctitle: JDBC
+:shortname: jdbc
+:artifactid: camel-jdbc
+:description: Access databases through SQL and JDBC.
+:since: 1.2
+:supportlevel: Stable
+:component-header: Only producer is supported
+//Manually maintained attributes
+:camel-spring-boot-name: jdbc
+
+*Since Camel {since}*
+
+*{component-header}*
+
+The JDBC component enables you to access databases through JDBC, where
+SQL queries (SELECT) and operations (INSERT, UPDATE, etc) are sent in
+the message body. This component uses the standard JDBC API, unlike the
+xref:sql-component.adoc[SQL Component] component, which uses
+spring-jdbc.
+
+NOTE: Use the xref:spring-jdbc-component.adoc[Spring JDBC Component] instead of this component,
+when you use Spring and need to support Spring Transactions.
+
+Maven users will need to add the following dependency to their `pom.xml`
+for this component:
+
+[source,xml]
+----
+<dependency>
+    <groupId>org.apache.camel</groupId>
+    <artifactId>camel-jdbc</artifactId>
+    <version>x.x.x</version>
+    <!-- use the same version as your Camel core version -->
+</dependency>
+----
+
+This component can only be used to define producer endpoints, which
+means that you cannot use the JDBC component in a `from()` statement.
+
+== URI format
+
+----
+jdbc:dataSourceName[?options]
+----
+
+
+// component-configure options: START
+
+// component-configure options: END
+
+// component options: START
+include::partial$component-configure-options.adoc[]
+include::partial$component-endpoint-options.adoc[]
+// component options: END
+
+// endpoint options: START
+
+// endpoint options: END
+
+// component headers: START
+include::partial$component-endpoint-headers.adoc[]
+// component headers: END
+
+== Result
+
+By default the result is returned in the OUT body as an
+`ArrayList<HashMap<String, Object>>`. The `List` object contains the
+list of rows and the `Map` objects contain each row with the `String`
+key as the column name. You can use the option `outputType` to control
+the result.
+
+*Note:* This component fetches `ResultSetMetaData` to be able to return
+the column name as the key in the `Map`.
+
+== Generated keys
+
+If you insert data using SQL INSERT, then the RDBMS may support auto
+generated keys. You can instruct the xref:jdbc-component.adoc[JDBC] producer to
+return the generated keys in headers. +
+ To do that set the header `CamelRetrieveGeneratedKeys=true`. Then the
+generated keys will be provided as headers with the keys listed in the
+table above.
+
+Using generated keys does not work with together with named parameters.
+
+== Using named parameters
+
+In the given route below, we want to get all the projects from the
+projects table. Notice the SQL query has 2 named parameters, :?lic and
+:?min. +
+ Camel will then lookup these parameters from the message headers.
+Notice in the example above we set two headers with constant value
+ for the named parameters:
+
+[source,java]
+----
+  from("direct:projects")
+     .setHeader("lic", constant("ASF"))
+     .setHeader("min", constant(123))
+     .setBody("select * from projects where license = :?lic and id > :?min order by id")
+     .to("jdbc:myDataSource?useHeadersAsParameters=true")
+----
+
+You can also store the header values in a `java.util.Map` and store the
+map on the headers with the key `CamelJdbcParameters`.
+
+== Samples
+
+In the following example, we fetch the rows from the customer table.
+
+First we register our datasource in the Camel registry as `testdb`:
+
+Then we configure a route that routes to the JDBC component, so the SQL
+will be executed. Note how we refer to the `testdb` datasource that was
+bound in the previous step:
+
+Or you can create a `DataSource` in Spring like this:
+
+With spring xml:
+
+[source,xml]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans                                                                                                                                                                                                                                                         
+                           http://www.springframework.org/schema/beans/spring-beans.xsd                                                                                                                                                                                                                                        
+                           http://camel.apache.org/schema/spring                                                                                                                                                                                                                                                               
+                           http://camel.apache.org/schema/spring/camel-spring.xsd                                                                                                                                                                                                                                              
+                           http://www.springframework.org/schema/jdbc                                                                                                                                                                                                                                                          
+                           http://www.springframework.org/schema/jdbc/spring-jdbc-3.0.xsd                                                                                                                                                                                                                                      
+                           http://activemq.apache.org/schema/core                                                                                                                                                                                                                                                              
+                           http://activemq.apache.org/schema/core/activemq-core.xsd">
+
+  <!--  PROPERTY PLACEHOLDERS  -->
+  <!--                                                                                                                                                                                                                                                                                                                         
+       You may use property placeholders data store configuration                                                                                                                                                                                                                                                              
+       for to do that, you can resolve this properties with srping                                                                                                                                                                                                                                                             
+  -->
+  <bean id="db" class="org.apache.camel.spring.spi.BridgePropertyPlaceholderConfigurer">
+    <property name="location" value="classpath:db.properties"/>
+  </bean>
+
+  <!-- DATA STORE CONFIGURATION -->
+
+  <!--                                                                                                                                                                                                                                                                                                                         
+       In this example the DataStore is a postgres database, you can change the jdbc connector.                                                                                                                                                                                                                                
+       Also, the property testWhileIdle and validationQuery keep connection open.                                                                                                                                                                                                                                              
+  -->                                                                                                                                                                                                                                                                                                                          
+  
+  <bean id="DataStore" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+    <property name="driverClassName" value="org.postgresql.Driver" />
+    <property name="url" value="jdbc:postgresql://${DB_HOST}/${DB_NAME}"/>
+    <property name="username" value="${DB_USER}" />
+    <property name="password" value="${DB_PASS}" />
+    <property name="initialSize" value="4"/>
+    <property name="maxActive" value="15"/>
+    <property name="maxIdle" value="16"/>
+    <property name="minIdle" value="8"/>
+    <property name="timeBetweenEvictionRunsMillis" value="1800"/>
+    <property name="minEvictableIdleTimeMillis" value="1800"/>
+    <property name="testOnBorrow" value="true"/>
+    <property name="testWhileIdle" value="true"/>
+    <property name="testOnReturn" value="true"/>
+    <property name="validationQuery" value="SELECT 1"/>
+    <property name="maxWait"  value="1000"/>
+    <property name="removeAbandoned" value="true"/>
+    <property name="logAbandoned" value="true"/>
+    <property name="removeAbandonedTimeout" value="30000"/>
+  </bean>
+
+  <!-- You shuould write a file with an script to initialize your database.                                                                                                                                                                                                                                                    
+  If you have nothing to do with your database, then you can write just a                                                                                                                                                                                                                                                      
+  validation query like 'SELECT *; '-->
+  <jdbc:initialize-database data-source="DataStore" enabled="true">
+    <jdbc:script location="classpath:datastore-schema.sql" />
+  </jdbc:initialize-database>
+
+  <camelContext xmlns="http://camel.apache.org/schema/spring">
+
+    <!-- CAMEL ROUTE -->
+    <route id="Reporter">
+      <from uri="direct:to-datastore"/>
+      <!-- this example is done with camel-jdbc but you can make it work with camel-sql -->
+      <setBody>
+        <simple>insert into test '${body[value]}'</simple>
+      </setBody>
+      <to uri="jdbc:DataStore"/>
+    </route>
+</camelContext>
+----
+
+We create an endpoint, add the SQL query to the body of the IN message,
+and then send the exchange. The result of the query is returned in the
+OUT body:
+
+If you want to work on the rows one by one instead of the entire
+ResultSet at once you need to use the Splitter EIP
+such as:
+
+[source,java]
+----
+from("direct:hello")
+// here we split the data from the testdb into new messages one by one
+// so the mock endpoint will receive a message per row in the table
+// the StreamList option allows to stream the result of the query without creating a List of rows
+// and notice we also enable streaming mode on the splitter
+.to("jdbc:testdb?outputType=StreamList")
+  .split(body()).streaming()
+  .to("mock:result");
+----
+
+== Sample - Polling the database every minute
+
+If we want to poll a database using the JDBC component, we need to
+combine it with a polling scheduler such as the xref:timer-component.adoc[Timer]
+or xref:quartz-component.adoc[Quartz] etc. In the following example, we retrieve
+data from the database every 60 seconds:
+
+[source,java]
+----
+from("timer://foo?period=60000")
+  .setBody(constant("select * from customer"))
+  .to("jdbc:testdb")
+  .to("activemq:queue:customers");
+----
+
+== Sample - Move Data Between Data Sources
+
+A common use case is to query for data, process it and move it to
+another data source (ETL operations). In the following example, we
+retrieve new customer records from the source table every hour,
+filter/transform them and move them to a destination table:
+
+[source,java]
+----
+from("timer://MoveNewCustomersEveryHour?period=3600000")
+    .setBody(constant("select * from customer where create_time > (sysdate-1/24)"))
+    .to("jdbc:testdb")
+    .split(body())
+        .process(new MyCustomerProcessor()) //filter/transform results as needed
+        .setBody(simple("insert into processed_customer values('${body[ID]}','${body[NAME]}')"))
+        .to("jdbc:testdb");
+----
+
+
+
+include::spring-boot:partial$starter.adoc[]

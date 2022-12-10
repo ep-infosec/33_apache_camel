@@ -1,0 +1,67 @@
+= Java DSL
+
+Apache Camel offers a Java based DSL.
+
+The Java DSL is available by extending the `RouteBuilder` class,
+and implement the `configure` method.
+
+== Java DSL example
+
+This is best illustrate by an example. In the code below we create a new
+class called `MyRouteBuilder` that extends the
+`org.apache.camel.builder.RouteBuilder` from Camel.
+
+In the `configure` method the Java DSL is at our disposal.
+
+[source,java]
+-------------------------------------------------------------------------
+import org.apache.camel.builder.RouteBuilder;
+
+/**
+ * A Camel Java DSL Router
+ */
+public class MyRouteBuilder extends RouteBuilder {
+
+    /**
+     * Let's configure the Camel routing rules using Java code...
+     */
+    public void configure() {
+
+        // here is a sample which processes the input files
+        // (leaving them in place - see the 'noop' flag)
+        // then performs content based routing on the message using XPath
+        from("file:src/data?noop=true")
+            .choice()
+                .when(xpath("/person/city = 'London'"))
+                    .to("file:target/messages/uk")
+                .otherwise()
+                    .to("file:target/messages/others");
+    }
+
+}
+-------------------------------------------------------------------------
+
+In the `configure` method we can define Camel xref:routes.adoc[Routes].
+
+In the example above we have a single route, which pickup files (the `from`).
+
+[source,java]
+---------------------------------------
+from("file:src/data?noop=true")
+---------------------------------------
+
+Then we use the xref:components:eips:choice-eip.adoc[Content Based Router] EIP
+(the `choice`) to route the message whether the person is from London or not.
+
+[source,java]
+-------------------------------------------------------
+.choice()
+    .when(xpath("/person/city = 'London'"))
+        .to("file:target/messages/uk")
+    .otherwise()
+        .to("file:target/messages/others");
+-------------------------------------------------------
+
+== More Details
+
+For more details see xref:dsl.adoc[DSL], xref:routes.adoc[Routes], and xref:processor.adoc[Processor].

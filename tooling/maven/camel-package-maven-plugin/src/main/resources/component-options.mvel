@@ -1,0 +1,2 @@
+include::partial$component-configure-options.adoc[]
+include::partial$component-endpoint-options.adoc[]

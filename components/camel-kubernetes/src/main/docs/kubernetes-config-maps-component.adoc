@@ -1,0 +1,103 @@
+= Kubernetes ConfigMap Component
+:doctitle: Kubernetes ConfigMap
+:shortname: kubernetes-config-maps
+:artifactid: camel-kubernetes
+:description: Perform operations on Kubernetes ConfigMaps and get notified on ConfigMaps changes.
+:since: 2.17
+:supportlevel: Stable
+:component-header: Both producer and consumer are supported
+//Manually maintained attributes
+:group: Kubernetes
+:camel-spring-boot-name: kubernetes
+
+*Since Camel {since}*
+
+*{component-header}*
+
+The Kubernetes ConfigMap component is one of xref:kubernetes-summary.adoc[Kubernetes Components] which
+provides a producer to execute Kubernetes ConfigMap operations and a consumer to consume events related to ConfigMap objects.
+
+
+// component-configure options: START
+
+// component-configure options: END
+
+// component options: START
+include::partial$component-configure-options.adoc[]
+include::partial$component-endpoint-options.adoc[]
+// component options: END
+
+// endpoint options: START
+
+// endpoint options: END
+
+// component headers: START
+include::partial$component-endpoint-headers.adoc[]
+// component headers: END
+
+== Supported producer operation
+
+- listConfigMaps
+- listConfigMapsByLabels
+- getConfigMap
+- createConfigMap
+- replaceConfigMap
+- deleteConfigMap
+
+== Kubernetes ConfigMaps Producer Examples
+
+- listConfigMaps: this operation list the configmaps
+
+[source,java]
+--------------------------------------------------------------------------------
+from("direct:list").
+    to("kubernetes-config-maps:///?kubernetesClient=#kubernetesClient&operation=listConfigMaps").
+    to("mock:result");
+--------------------------------------------------------------------------------
+
+This operation return a List of ConfigMaps from your cluster
+
+- listConfigMapsByLabels: this operation list the configmaps selected by label
+
+[source,java]
+--------------------------------------------------------------------------------
+from("direct:listByLabels").process(new Processor() {
+
+            @Override
+            public void process(Exchange exchange) throws Exception {
+                Map<String, String> labels = new HashMap<>();
+                labels.put("key1", "value1");
+                labels.put("key2", "value2");
+                exchange.getIn().setHeader(KubernetesConstants.KUBERNETES_CONFIGMAPS_LABELS, labels);
+            }
+        });
+    to("kubernetes-config-maps:///?kubernetesClient=#kubernetesClient&operation=listConfigMapsByLabels").
+    to("mock:result");
+--------------------------------------------------------------------------------
+
+This operation return a List of ConfigMaps from your cluster, using a label selector (with key1 and key2, with value value1 and value2)
+
+== Kubernetes ConfigMaps Consumer Example
+
+[source,java]
+--------------------------------------------------------------------------------
+fromF("kubernetes-config-maps://%s?oauthToken=%s", host, authToken)
+    .setHeader(KubernetesConstants.KUBERNETES_NAMESPACE_NAME, constant("default"))
+    .setHeader(KubernetesConstants.KUBERNETES_CONFIGMAP_NAME, constant("test"))
+    .process(new KubernertesProcessor()).to("mock:result");
+
+    public class KubernertesProcessor implements Processor {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+            Message in = exchange.getIn();
+            ConfigMap cm = exchange.getIn().getBody(ConfigMap.class);
+            log.info("Got event with configmap name: " + cm.getMetadata().getName() + " and action " + in.getHeader(KubernetesConstants.KUBERNETES_EVENT_ACTION));
+        }
+    }
+--------------------------------------------------------------------------------
+
+This consumer will return a list of events on the namespace default for the config map test.
+
+
+
+include::spring-boot:partial$starter.adoc[]

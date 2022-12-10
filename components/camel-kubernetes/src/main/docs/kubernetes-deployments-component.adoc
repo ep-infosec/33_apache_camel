@@ -1,0 +1,98 @@
+= Kubernetes Deployments Component
+:doctitle: Kubernetes Deployments
+:shortname: kubernetes-deployments
+:artifactid: camel-kubernetes
+:description: Perform operations on Kubernetes Deployments and get notified on Deployment changes.
+:since: 2.20
+:supportlevel: Stable
+:component-header: Both producer and consumer are supported
+//Manually maintained attributes
+:group: Kubernetes
+:camel-spring-boot-name: kubernetes
+
+*Since Camel {since}*
+
+*{component-header}*
+
+The Kubernetes Deployments component is one of xref:kubernetes-summary.adoc[Kubernetes Components] which
+provides a producer to execute Kubernetes Deployments operations and a consumer to consume events related to Deployments objects.
+
+// component-configure options: START
+
+// component-configure options: END
+
+// component options: START
+include::partial$component-configure-options.adoc[]
+include::partial$component-endpoint-options.adoc[]
+// component options: END
+
+// endpoint options: START
+
+// endpoint options: END
+
+// component headers: START
+include::partial$component-endpoint-headers.adoc[]
+// component headers: END
+
+== Supported producer operation
+
+- listDeployments
+- listDeploymentsByLabels
+- getDeployment
+- createDeployment
+- replaceDeployment
+- deleteDeployment
+- scaleDeployment
+
+== Kubernetes Deployments Producer Examples
+
+- listDeployments: this operation list the deployments on a kubernetes cluster
+
+[source,java]
+--------------------------------------------------------------------------------
+from("direct:list").
+    toF("kubernetes-deployments:///?kubernetesClient=#kubernetesClient&operation=listDeployments").
+    to("mock:result");
+--------------------------------------------------------------------------------
+
+This operation return a List of Deployment from your cluster
+
+- listDeploymentsByLabels:  this operation list the deployments by labels on a kubernetes cluster
+
+[source,java]
+--------------------------------------------------------------------------------
+from("direct:listByLabels").process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+                Map<String, String> labels = new HashMap<>();
+                labels.put("key1", "value1");
+                labels.put("key2", "value2");
+                exchange.getIn().setHeader(KubernetesConstants.KUBERNETES_DEPLOYMENTS_LABELS, labels);
+            }
+        });
+    toF("kubernetes-deployments:///?kubernetesClient=#kubernetesClient&operation=listDeploymentsByLabels").
+    to("mock:result");
+--------------------------------------------------------------------------------
+
+This operation return a List of Deployments from your cluster, using a label selector (with key1 and key2, with value value1 and value2)
+
+== Kubernetes Deployments Consumer Example
+
+[source,java]
+--------------------------------------------------------------------------------
+fromF("kubernetes-deployments://%s?oauthToken=%s&namespace=default&resourceName=test", host, authToken).process(new KubernertesProcessor()).to("mock:result");
+    public class KubernertesProcessor implements Processor {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+            Message in = exchange.getIn();
+            Deployment dp = exchange.getIn().getBody(Deployment.class);
+            log.info("Got event with configmap name: " + dp.getMetadata().getName() + " and action " + in.getHeader(KubernetesConstants.KUBERNETES_EVENT_ACTION));
+        }
+    }
+--------------------------------------------------------------------------------
+
+This consumer will return a list of events on the namespace default for the deployment test.
+
+
+
+include::spring-boot:partial$starter.adoc[]

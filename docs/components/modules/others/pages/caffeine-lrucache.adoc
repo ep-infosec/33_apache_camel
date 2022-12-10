@@ -1,0 +1,1 @@
+../../../../../components/camel-caffeine-lrucache/src/main/docs/caffeine-lrucache.adoc

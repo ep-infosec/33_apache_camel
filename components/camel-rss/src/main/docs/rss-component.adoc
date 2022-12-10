@@ -1,0 +1,114 @@
+= RSS Component
+:doctitle: RSS
+:shortname: rss
+:artifactid: camel-rss
+:description: Poll RSS feeds.
+:since: 2.0
+:supportlevel: Stable
+:component-header: Only consumer is supported
+//Manually maintained attributes
+:camel-spring-boot-name: rss
+
+*Since Camel {since}*
+
+*{component-header}*
+
+The RSS component is used for polling RSS feeds. Camel will default
+poll the feed every 60th seconds.
+
+Maven users will need to add the following dependency to their `pom.xml`
+for this component:
+
+[source,xml]
+------------------------------------------------------------
+<dependency>
+    <groupId>org.apache.camel</groupId>
+    <artifactId>camel-rss</artifactId>
+    <version>x.x.x</version>
+    <!-- use the same version as your Camel core version -->
+</dependency>
+------------------------------------------------------------
+
+*Note:* The component currently only supports polling (consuming) feeds.
+
+== URI format
+
+----------
+rss:rssUri
+----------
+
+Where `rssUri` is the URI to the RSS feed to poll.
+
+// component-configure options: START
+
+// component-configure options: END
+
+// component options: START
+include::partial$component-configure-options.adoc[]
+include::partial$component-endpoint-options.adoc[]
+// component options: END
+
+// endpoint options: START
+
+// endpoint options: END
+// component headers: START
+include::partial$component-endpoint-headers.adoc[]
+// component headers: END
+
+== Exchange data types
+
+Camel initializes the In body on the Exchange with a ROME `SyndFeed`.
+Depending on the value of the `splitEntries` flag, Camel returns either
+a `SyndFeed` with one `SyndEntry` or a `java.util.List` of `SyndEntrys`.
+
+[width="100%",cols="10%,10%,80%",options="header",]
+|=======================================================================
+|Option |Value |Behavior
+
+|`splitEntries` |`true` |A single entry from the current feed is set in the exchange.
+
+|`splitEntries` |`false` |The entire list of entries from the current feed is set in the exchange.
+|=======================================================================
+
+== Example
+
+If the URL for the RSS feed uses query parameters, this component will
+resolve them. For example if the feed uses `alt=rss`, then the following example will be resolved:
+
+[source,java]
+----
+from("rss:http://someserver.com/feeds/posts/default?alt=rss&splitEntries=false&delay=1000")
+    .to("bean:rss");
+----
+
+== Filtering entries
+
+You can filter out entries using XPath, as shown in the
+data format section above. You can also exploit Camel's
+Bean Integration to implement your own
+conditions. For instance, a filter equivalent to the XPath example above
+would be:
+
+[source,java]
+----
+from("rss:file:src/test/data/rss20.xml?splitEntries=true&delay=100")
+    .filter().method("myFilterBean", "titleContainsCamel")
+        .to("mock:result");
+----
+
+The custom bean for this would be:
+
+[source,java]
+----
+public static class FilterBean {
+
+    public boolean titleContainsCamel(@Body SyndFeed feed) {
+        SyndEntry firstEntry = (SyndEntry) feed.getEntries().get(0);
+        return firstEntry.getTitle().contains("Camel");
+    }
+}
+----
+
+
+
+include::spring-boot:partial$starter.adoc[]

@@ -1,0 +1,101 @@
+= Braintree Component
+:doctitle: Braintree
+:shortname: braintree
+:artifactid: camel-braintree
+:description: Process payments using Braintree Payments.
+:since: 2.17
+:supportlevel: Stable
+:component-header: Only producer is supported
+//Manually maintained attributes
+:camel-spring-boot-name: braintree
+
+*Since Camel {since}*
+
+*{component-header}*
+
+The Braintree component provides access to
+https://www.braintreepayments.com/[Braintree Payments] trough through
+theirs https://developers.braintreepayments.com/start/hello-server/java[Java
+SDK].
+
+All client applications need API credential in order to process
+payments. In order to use camel-braintree with your account, you'll need
+to create a new
+https://www.braintreepayments.com/get-started[Sandbox] or https://www.braintreepayments.com/signup[Production]
+account.
+
+
+Maven users will need to add the following dependency to their pom.xml
+for this component:
+
+[source,xml]
+--------------------------------------------
+<dependency>
+    <groupId>org.apache.camel</groupId>
+    <artifactId>camel-braintree</artifactId>
+    <version>${camel-version}</version>
+</dependency>
+--------------------------------------------
+
+
+// component-configure options: START
+
+// component-configure options: END
+
+// component options: START
+include::partial$component-configure-options.adoc[]
+include::partial$component-endpoint-options.adoc[]
+// component options: END
+
+// endpoint options: START
+
+// endpoint options: END
+
+== Examples
+
+*OSGi Blueprint*
+
+[source,xml]
+----
+<?xml version="1.0"?>
+<blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.0.0"
+           xsi:schemaLocation="
+             http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.0.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.0.0.xsd
+             http://www.osgi.org/xmlns/blueprint/v1.0.0 https://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
+             http://camel.apache.org/schema/blueprint http://camel.apache.org/schema/blueprint/camel-blueprint.xsd">
+
+
+    <cm:property-placeholder id="placeholder" persistent-id="camel.braintree">
+    </cm:property-placeholder>
+
+    <bean id="braintree" class="org.apache.camel.component.braintree.BraintreeComponent">
+        <property name="configuration">
+            <bean class="org.apache.camel.component.braintree.BraintreeConfiguration">
+                <property name="environment" value="${environment}"/>
+                <property name="merchantId" value="${merchantId}"/>
+                <property name="publicKey" value="${publicKey}"/>
+                <property name="privateKey" value="${privateKey}"/>
+            </bean>
+        </property>
+    </bean>
+
+    <camelContext trace="true" xmlns="http://camel.apache.org/schema/blueprint" id="braintree-example-context">
+        <route id="braintree-example-route">
+            <from uri="direct:generateClientToken"/>
+            <to uri="braintree://clientToken/generate"/>
+            <to uri="stream:out"/>
+        </route>
+    </camelContext>
+
+</blueprint>
+----
+
+== More Information
+
+For more information on the endpoints and options see Braintree
+references at https://developers.braintreepayments.com/reference/overview[https://developers.braintreepayments.com/reference/overview]
+
+
+
+include::spring-boot:partial$starter.adoc[]

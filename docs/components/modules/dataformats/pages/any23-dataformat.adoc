@@ -1,0 +1,1 @@
+../../../../../components/camel-any23/src/main/docs/any23-dataformat.adoc

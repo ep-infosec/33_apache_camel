@@ -1,0 +1,18 @@
+{
+  "model": {
+    "kind": "model",
+    "name": "errorHandler",
+    "title": "Error Handler",
+    "description": "Camel error handling.",
+    "deprecated": false,
+    "label": "configuration,error",
+    "javaType": "org.apache.camel.model.ErrorHandlerDefinition",
+    "abstract": false,
+    "input": false,
+    "output": false
+  },
+  "properties": {
+    "errorHandlerType": { "kind": "element", "displayName": "Error Handler Type", "required": true, "type": "object", "javaType": "org.apache.camel.ErrorHandlerFactory", "oneOf": [ "deadLetterChannel", "defaultErrorHandler", "jtaTransactionErrorHandler", "noErrorHandler", "springTransactionErrorHandler" ], "deprecated": false, "autowired": false, "secret": false, "description": "The specific error handler in use." },
+    "id": { "kind": "attribute", "displayName": "Id", "required": false, "type": "string", "javaType": "java.lang.String", "deprecated": false, "autowired": false, "secret": false, "description": "The id of this node" }
+  }
+}

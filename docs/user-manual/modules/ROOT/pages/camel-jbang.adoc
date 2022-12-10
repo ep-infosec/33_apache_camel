@@ -1,0 +1,1658 @@
+= Camel JBang
+
+A JBang-based Camel app for easily running Camel routes.
+
+== Installation
+
+First you must install https://www.jbang.dev/[JBang] which is used for launching Camel.
+See instructions on https://www.jbang.dev/download/[JBang] how to download and install.
+
+After JBang is installed you can verify JBang is working by executing the following command from a command shell:
+
+[source,bash]
+----
+jbang version
+----
+
+Which should output the version of JBang.
+
+To make it easier to use Camel JBang then install the following:
+
+[source,bash]
+----
+jbang app install camel@apache/camel
+----
+
+This will install Apache Camel as the `camel` command within JBang, meaning that you can run Camel from the command line
+by just executing `camel` (see more next).
+
+== Using Camel JBang
+
+The Camel JBang supports multiple commands. Running the command below, will print all of them:
+
+[source,bash]
+----
+camel --help
+----
+
+TIP: The first time you run this command, it may cause dependencies to be cached, therefore taking a few extra seconds to run.
+
+All the commands support the `--help` and will display the appropriate help if that flag is provided.
+
+=== Enable shell completion
+
+Camel JBang provides shell completion for bash and zsh out of the box. To enable shell completion for Camel JBang, run:
+
+[source,bash]
+----
+source <(camel completion)
+----
+
+To make it permanent, run:
+
+[source,bash]
+----
+echo 'source <(camel completion)' >> ~/.bashrc
+----
+
+== Creating and running Camel routes
+
+You can create a new basic routes with the `init` command.
+
+For example to create an XML route you do:
+
+[source,bash]
+----
+camel init cheese.xml
+----
+
+Which creates the file `cheese.xml` (in the current directory) with a sample route.
+
+To run the file, you simply do:
+
+[source,bash]
+----
+camel run cheese.xml
+----
+
+NOTE: You can create and run any of the supported xref:dsl.adoc[DSLs] in Camel such as YAML, XML, Java, Groovy.
+
+To create a new .java route, you simply do:
+
+[source,bash]
+----
+camel init foo.java
+----
+
+When using the init command then Camel will by default create the file in the current directory. However, you can use
+the `--directory` option to create the file in the specified directory. For example to create in a folder
+named _foobar_ you can do:
+
+[source,bash]
+----
+camel init foo.java --directory=foobar
+----
+
+IMPORTANT: When using `--directory` then Camel will automatically clean this directory if already exists.
+
+=== Running Routes from multiple files
+
+You can run more than 1 file, for example to run two YAML files you can do:
+
+[source,bash]
+----
+camel run one.yaml two.yaml
+----
+
+You can also mix different xref:dsl.adoc[DSLs] such as yaml and Java:
+
+[source,bash]
+----
+camel run one.yaml hello.java
+----
+
+You can also use wildcards (i.e. `*`) to match multiple files, such as running all the yaml files:
+
+[source,bash]
+----
+camel run *.yaml
+----
+
+Or you can run all files starting with foo*
+
+[source,bash]
+----
+camel run foo*
+----
+
+And to run everything
+
+[source,bash]
+----
+camel run *
+----
+
+TIP: The run goal can also detect files that are `properties`, such as `application.properties`.
+
+=== Running Route from input parameter
+
+For very small Java routes then it is possible to provide the route as CLI argument, as shown below:
+
+[source,bash]
+----
+camel run --code='from("kamelet:beer-source").to("log:beer")'
+----
+
+This is very limited as the CLI argument is a bit cumbersome to use than files.
+
+- Java DSL code is only supported
+- Code wrapped in single quote, so you can use double quote in Java DSL
+- Code limited to what literal values possible to provide from the terminal and JBang.
+- All route(s) must be defined in a single `--code` parameter.
+
+NOTE: Using `--code` is only usable for very quick and small prototypes.
+
+=== Dev mode with live reload
+
+You can enable dev mode that comes with live reload of the route(s) when the source file is updated (saved),
+using the `--dev` options as shown:
+
+[source,bash]
+----
+camel run foo.yaml --dev
+----
+
+Then while the Camel integration is running, you can update the YAML route and update when saving.
+
+This works for all DLS even java, so you can do:
+
+[source,bash]
+----
+camel run hello.java --dev
+----
+
+NOTE: The live reload is meant for development purposes, and if you encounter problems with reloading
+such as JVM class loading issues, then you may need to restart the integration.
+
+=== Developer Console
+
+You can enable the developer console, which presents a variety of information to the developer.
+
+[source,bash]
+----
+camel run hello.java --console
+----
+
+The console is then accessible from a web browser at: http://localhost:8080/q/dev (by default).
+The link is also shown in the log when Camel is starting up.
+
+The console can give you insights into your running Camel integration, such as reporting the top
+routes that takes the longest time to process messages. You can then drill down to pin-point, exactly
+which individual EIPs in these routes are the slowest.
+
+The developer console can also output the data in JSon format, which for example can be used by 3rd-party tooling
+to scrape the information.
+
+For example to output the top routes via curl, you can execute:
+
+[source,bash]
+----
+curl -s -H "Accept: application/json"  http://0.0.0.0:8080/q/dev/top/
+----
+
+And if you have `jq` installed which can format and output the JSon data in colour, then do:
+
+[source,bash]
+----
+curl -s -H "Accept: application/json"  http://0.0.0.0:8080/q/dev/top/ | jq
+----
+
+=== Using profiles
+
+Camel JBang have the concept of profiles. A _profile_ is essentially a name (id) that refers
+to which configuration to automatic load with Camel JBang. The default profile is named `application`
+which is a (smart default) to let Camel JBang automatic load `application.properties` (if present).
+
+This means that creating profiles matching to a properties file with the same name.
+
+For example having a profile named `local`, means that Camel JBang will load `local.properties` instead
+of `application.properties`.
+
+To use a profile, you specify as command line option `--profile` such as:
+
+[source,bash]
+----
+camel run hello.java --profile=local
+----
+
+You can only specify one profile name, i.e. `--profile=local,two` is not valid.
+
+In the `properties` files you can configure all
+the configurations from xref:components:others:main.adoc[Camel Main].
+
+For example to turn off xref:stream-caching.adoc[Stream Caching] and enable log masking you can specify:
+
+[source,properties]
+----
+camel.main.streamCaching=false
+camel.main.logMask=true
+----
+
+And you can also configure Camel components such as camel-kafka to declare the URL to the brokers:
+
+[source,properties]
+----
+camel.component.kafka.brokers=broker1:9092,broker2:9092,broker3:9092
+----
+
+NOTE: Keys starting with `camel.jbang` are reserved keys that are used by Camel JBang internally,
+and as well allow for pre-configuring arguments for Camel JBang commands.
+
+=== Downloading JARs over the internet
+
+By default, Camel JBang will automatically resolve dependencies needed to run Camel, which is done
+by JBang and Camel respectively. Camel itself detects at runtime if a component has a need for JARs that
+are not currently available on the classpath, and can then automatic download the JARs (incl transitive).
+
+Camel will download these JARs in the following order:
+
+1. from local disk in `~/.m2/repository`
+2. from internet in Maven Central
+3. from internet in custom 3rd-party Maven repositories
+4. from all the repositories found in active profiles of `~/.m2/settings.xml` or a settings file specified using
+`--maven-settings` option.
+
+If you do not want Camel JBang to download over the internet, you can turn this off with `--download`, as shown below:
+
+[source,bash]
+----
+camel run foo.java --download=false
+----
+
+[#_adding_custom_jars]
+=== Adding custom JARs
+
+Camel JBang will automatically detect dependencies for Camel components, languages, data formats, etc. that
+from its own release. This means you often do not have to specify which JARs to use.
+
+However, if you need to add 3rd-party custom JARs then you can specify these with `--deps` as CLI argument in Maven
+GAV syntax (`groupId:artifactId:version`), such as:
+
+[source,bash]
+----
+camel run foo.java --deps=com.foo:acme:1.0
+----
+
+In case you need to explicit add a Camel dependency you can use a shorthand syntax (starting with `camel:` or `camel-`)
+such as:
+
+[source,bash]
+----
+camel run foo.java --deps=camel-saxon
+----
+
+You can specify multiple dependencies separated by comma:
+
+[source,bash]
+----
+camel run foo.java --deps=camel-saxon,com.foo:acme:1.0
+----
+
+=== Using 3rd-party Maven repositories
+
+Camel JBang will download from local repository first, and then online from Maven Central.
+To be able to download from 3rd-party Maven repositories then you need to specify this as CLI argument,
+]or in `application.properties`
+
+[source,bash]
+----
+camel run foo.java --repos=https://packages.atlassian.com/maven-external
+----
+
+TIP: Multiple repositories can be separated by comma
+
+The configuration for the 3rd-party Maven repositories can also be configured in `application.properties`
+with the key `camel.jbang.repos` as shown:
+
+[source,properties]
+----
+camel.jbang.repos=https://packages.atlassian.com/maven-external
+----
+
+And when running Camel then `application.properties` is automatically loaded:
+
+[source,bash]
+----
+camel run foo.java
+----
+
+However, you can also explicit specify the properties file to use:
+
+[source,bash]
+----
+camel run foo.java application.properties
+----
+
+And even better if you specify this as a profile:
+
+[source,bash]
+----
+camel run foo.java --profile=application
+----
+
+Where the profile id is the name of the properties file.
+
+
+=== Configuration of Maven usage
+
+By default, existing `~/.m2/settings.xml` file is loaded, so it is possible to alter the behaviour of Maven resolution
+process. Maven settings file can provide information about Maven mirrors, credential configuration (potentially
+encrypted) or active profiles and additional repositories.
+
+Maven repositories can use authentication and the Maven-way to configure credentials is through `<server>` elements,
+like this:
+
+[source,xml]
+----
+<server>
+    <id>external-repository</id>
+    <username>camel</username>
+    <password>{SSVqy/PexxQHvubrWhdguYuG7HnTvHlaNr6g3dJn7nk=}</password>
+</server>
+----
+
+While the password may be specified using plain text, it's better to configure maven master password first and then
+use it to configure repository password:
+
+[source,bash]
+----
+$ mvn -emp
+[INFO] BuildTimeEventSpy is registered.
+Master password: camel
+{hqXUuec2RowH8dA8vdqkF6jn4NU9ybOsDjuTmWvYj4U=}
+----
+
+The above password should be added to `~/.m2/settings-security.xml` file like this:
+
+[source,xml]
+----
+<settingsSecurity>
+  <master>{hqXUuec2RowH8dA8vdqkF6jn4NU9ybOsDjuTmWvYj4U=}</master>
+</settingsSecurity>
+----
+
+Then a normal password can be configured like this:
+
+[source,bash]
+----
+$ mvn -ep
+[INFO] BuildTimeEventSpy is registered.
+Password: camel
+{SSVqy/PexxQHvubrWhdguYuG7HnTvHlaNr6g3dJn7nk=}
+----
+
+Finally, such password can be used in `<server>/<password>` configuration.
+
+By default, Maven reads the master password from `~/.m2/settings-security.xml` file, but we can override it.
+Location of the settings.xml file itself can be specified as well:
+
+[source,bash]
+----
+camel run foo.java --maven-settings=/path/to/settings.xml --maven-settings-security=/path/to/settings-security.xml
+----
+
+If you want to run Camel application without assuming any location (even `~/.m2/settings.xml`), use this option:
+
+[source,bash]
+----
+camel run foo.java --maven-settings=false
+----
+
+
+=== Running routes hosted on GitHub
+
+You can run a route that is hosted on GitHub using Camels xref:components:others:resourceresolver-github.adoc[github] resource loader.
+
+For example to run one of the Camel K examples you can do:
+
+[source,bash]
+----
+camel run github:apache:camel-kamelets-examples:jbang/hello-java/Hey.java
+----
+
+You can also use the `https` URL for GitHub. For example, you can browse the examples from a web-browser and
+then copy the URL from the browser window and run the example with Camel JBang:
+
+[source,bash]
+----
+camel run https://github.com/apache/camel-kamelets-examples/tree/main/jbang/hello-java
+----
+
+You can also use wildcards (i.e. `*`) to match multiple files, such as running all the groovy files:
+
+[source,bash]
+----
+camel run https://github.com/apache/camel-kamelets-examples/tree/main/jbang/languages/*.groovy
+----
+
+Or you can run all files starting with rou*
+
+[source,bash]
+----
+camel run https://github.com/apache/camel-kamelets-examples/tree/main/jbang/languages/rou*
+----
+
+==== Running routes from GitHub gists
+
+Using gists from GitHub is a quick way to share small Camel routes that you can easily run.
+
+For example to run a gist you simply do:
+
+[source,bash]
+----
+camel run https://gist.github.com/davsclaus/477ddff5cdeb1ae03619aa544ce47e92
+----
+
+A gist can contain one or more files, and Camel JBang will gather all relevant files, so a gist
+can contain multiple routes, properties files, Java beans, etc.
+
+=== Downloading routes hosted on GitHub
+
+We have made it easy for Camel JBang to download existing examples from GitHub to local disk,
+which allows for modifying the example and to run locally.
+
+All you need to do is to copy the https link from the web browser.
+For example, you can download the _dependency injection_ example by:
+
+[source,bash]
+----
+camel init https://github.com/apache/camel-kamelets-examples/tree/main/jbang/dependency-injection
+----
+
+Then the files (not sub folders) are downloaded to the current directory.
+The example can then be run locally with:
+
+[source,bash]
+----
+camel run *
+----
+
+You can also download to a new folder using the `--directory` option, for example to download to a folder named _myproject_,
+you would do:
+
+[source,bash]
+----
+camel init https://github.com/apache/camel-kamelets-examples/tree/main/jbang/dependency-injection --directory=myproject
+----
+
+IMPORTANT: When using `--directory` then Camel will automatically clean this directory if already exists.
+
+You can also run in dev mode, to hot-deploy on source code changes.
+
+[source,bash]
+----
+camel run * --dev
+----
+
+You can also download a single file, such as one of the Camel K examples:
+
+[source,bash]
+----
+camel init https://github.com/apache/camel-k-examples/blob/main/generic-examples/languages/simple.groovy
+----
+
+This is a groovy route, which you can run with (or use `*`):
+
+[source,bash]
+----
+camel run simple.groovy
+----
+
+==== Downloading routes form GitHub gists
+
+You can also download files from gists easily as shown:
+
+[source,bash]
+----
+camel init https://gist.github.com/davsclaus/477ddff5cdeb1ae03619aa544ce47e92
+----
+
+This will then download the files to local disk, which you can run afterwards:
+
+[source,bash]
+----
+camel run *
+----
+
+You can also download to a new folder using the `--directory` option, for example to download to a folder named _foobar_,
+you would do:
+
+[source,bash]
+----
+camel init https://gist.github.com/davsclaus/477ddff5cdeb1ae03619aa544ce47e92 --directory=foobar
+----
+
+IMPORTANT: When using `--directory` then Camel will automatically clean this directory if already exists.
+
+
+=== Using a specific Camel version
+
+You can specify which Camel version to run as shown:
+
+[source,bash]
+----
+jbang run -Dcamel.jbang.version=3.17.0 camel@apache/camel [command]
+----
+
+NOTE: Older versions of Camel may not work as well with Camel JBang as the newest versions.
+Starting from Camel 3.18 onwards is the versions that are recommended to be used onwards.
+
+And you can also try bleeding edge development by using SNAPSHOT such as:
+
+[source,bash]
+----
+jbang run --fresh -Dcamel.jbang.version=3.20.0-SNAPSHOT camel@apache/camel [command]
+----
+
+
+=== Running Camel K integrations or bindings
+
+Camel also supports running Camel K integrations and binding files, which are in CRD format (Kubernetes Custom Resource Definitions).
+
+For example a kamelet binding file named `joke.yaml`:
+
+[source,yaml]
+----
+#!/usr/bin/env jbang camel@apache/camel run
+apiVersion: camel.apache.org/v1alpha1
+kind: KameletBinding
+metadata:
+  name: joke
+spec:
+  source:
+    ref:
+      kind: Kamelet
+      apiVersion: camel.apache.org/v1
+      name: chuck-norris-source
+    properties:
+      period: 2000
+  sink:
+    ref:
+      kind: Kamelet
+      apiVersion: camel.apache.org/v1
+      name: log-sink
+    properties:
+      show-headers: false
+----
+
+Can be run with camel:
+
+[source,bash]
+----
+camel run joke.yaml
+----
+
+=== Run from clipboard
+
+You can also run Camel routes directly from the OS clipboard. This allows to copy some code,
+and then quickly run this.
+
+The syntax is
+
+[source,bash]
+----
+camel run clipboard.<extension>
+----
+
+Where `<extension>` is what kind of file the content of the clipboard is, such as `java`, `xml`, or `yaml` etc.
+
+For example. you can copy this to your clipboard and then run it afterwards:
+
+[source,xml]
+----
+<route>
+  <from uri="timer:foo"/>
+  <log message="Hello World"/>
+</route>
+----
+
+[source,bash]
+----
+camel run clipboard.xml
+----
+
+=== Controlling local Camel integrations
+
+To list the currently running Camel integrations you use the `ps` command:
+
+[source,bash]
+----
+camel ps
+  PID   NAME                          READY  STATUS    AGE
+ 61818  sample.camel.MyCamelApplica…   1/1   Running  26m38s
+ 62506  dude                           1/1   Running   4m34s
+----
+
+This lists the PID, the name and age of the integration.
+
+You can use the `stop` command to stop any of these running Camel integrations.
+For example to stop dude, you can do
+
+[source,bash]
+----
+camel stop dude
+Stopping running Camel integration (pid: 62506)
+----
+
+You can also stop by the PID:
+
+[source,bash]
+----
+camel stop 62506
+Stopping running Camel integration (pid: 62506)
+----
+
+TIP: You do not have to type the full name, as the stop command will match using integrations
+that starts with the input, for example you can do `camel stop d` to stop all integrations
+starting with d.
+
+To stop all integrations then you need to use the `--all` option as follows:
+
+[source,bash]
+----
+camel stop --all
+Stopping running Camel integration (pid: 61818)
+Stopping running Camel integration (pid: 62506)
+----
+
+==== Controlling Spring Boot and Quarkus integrations
+
+The Camel JBang CLI will by default only control Camel integrations that are running using the CLI, eg `camel run foo.java`.
+
+For the CLI to be able to control and manage Spring Boot or Quarkus applications, then you need to add a dependency
+to these projects to integrate with Camel CLI.
+
+In Spring Boot you add the following dependency:
+
+[source,xml]
+----
+<dependency>
+    <groupId>org.apache.camel.springboot</groupId>
+    <artifactId>camel-cli-connector-starter</artifactId>
+</dependency>
+----
+
+In Quarkus you need to add the following dependency:
+
+[source,xml]
+----
+<dependency>
+    <groupId>org.apache.camel.quarkus</groupId>
+    <artifactId>camel-quarkus-cli-connector</artifactId>
+</dependency>
+----
+
+==== Getting status of Camel integrations
+
+The `get` command in Camel JBang is used for getting Camel specific status for one
+or all of the running Camel integrations.
+
+To display the status of the running Camel integrations:
+
+[source,bash]
+----
+camel get
+  PID   NAME      CAMEL            PLATFORM            READY  STATUS    AGE    TOTAL  FAILED  INFLIGHT  SINCE-LAST
+ 61818  MyCamel   3.20.0-SNAPSHOT  Spring Boot v2.7.3   1/1   Running  28m34s    854       0         0     0s/0s/-
+ 63051  dude      3.20.0-SNAPSHOT  JBang                1/1   Running     18s     14       0         0     0s/0s/-
+ 63068  mygroovy  3.20.0-SNAPSHOT  JBang                1/1   Running      5s      2       0         0     0s/0s/-
+----
+
+The `camel get` command will default display integrations, which is equivalent to
+typing `camel get integrations` or `camel get int`.
+
+This displays overall information for every Camel integration, where you can see
+the total number of messages processed. The column _Since Last_
+shows how long time ago the last processed message for 3 stages (started/completed/failed).
+
+The value of `0s/0s/-` means that the last started and completed message just happened (0 seconds ago),
+and  that there has not been any failed message yet. And this example `9s/9s/1h3m` means that last started and
+completed message is 9 seconds ago, and last failed is 1 hour and 3 minutes ago.
+
+You can also see the status of every routes, from all the local Camel integrations with `camel get route`:
+
+[source,bash]
+----
+camel get route
+  PID   NAME      ID      FROM                        STATUS    AGE   TOTAL  FAILED  INFLIGHT  MEAN  MIN  MAX  SINCE-LAST
+ 61818  MyCamel   hello   timer://hello?period=2000   Running  29m2s    870       0         0     0    0   14     0s/0s/-
+ 63051  dude      java    timer://java?period=1000    Running    46s     46       0         0     0    0    9     0s/0s/-
+ 63068  mygroovy  groovy  timer://groovy?period=1000  Running    34s     34       0         0     0    0    5     0s/0s/-
+----
+
+TIP: Use `camel get --help` to display all the available commands as additional will be added in upcoming releases.
+
+==== Top status of Camel integrations
+
+The `camel top` command is intended for getting top utilization statistics (highest to lowest heap used memory)
+of the running Camel integrations.
+
+[source,bash]
+----
+camel top
+  PID   NAME     JAVA     CAMEL            PLATFORM            STATUS    AGE         HEAP        NON-HEAP     GC     THREADS   CLASSES
+ 22104  chuck    11.0.13  3.20.0-SNAPSHOT  JBang               Running   2m10s  131/322/4294 MB  70/73 MB  17ms (6)      7/8  7456/7456
+ 14242  MyCamel  11.0.13  3.20.0-SNAPSHOT  Spring Boot v2.7.3  Running  33m40s  115/332/4294 MB  62/66 MB  37ms (6)    16/16  8428/8428
+ 22116  bar      11.0.13  3.20.0-SNAPSHOT  JBang               Running    2m7s   33/268/4294 MB  54/58 MB  20ms (4)      7/8  6104/6104
+----
+
+The _HEAP_ column shows the heap memory (used/committed/max) and the non-heap (used/committed).
+The _GC_ column shows garbage collection information (time and total runs).
+The _CLASSES_ column shows number of classes (loaded/total).
+
+You can also see the top performing routes (highest to lowest mean processing time)
+of every routes, from all the local Camel integrations with `camel top route`:
+
+[source,bash]
+----
+camel top route
+  PID   NAME     ID                     FROM                                 STATUS    AGE    TOTAL  FAILED  INFLIGHT  MEAN  MIN  MAX  SINCE-LAST
+ 22104  chuck    chuck-norris-source-1  timer://chuck?period=10000           Started     10s      1       0         0   163  163  163          9s
+ 22116  bar      route1                 timer://yaml2?period=1000            Started      7s      7       0         0     1    0   11          0s
+ 22104  chuck    chuck                  kamelet://chuck-norris-source        Started     10s      1       0         0     0    0    0          9s
+ 22104  chuck    log-sink-2             kamelet://source?routeId=log-sink-2  Started     10s      1       0         0     0    0    0          9s
+ 14242  MyCamel  hello                  timer://hello?period=2000            Started  31m41s    948       0         0     0    0    4          0s
+----
+
+TIP: Use `camel top --help` to display all the available commands as additional will be added in upcoming releases.
+
+==== Starting and Stopping routes
+
+The `camel cmd` is intended for executing miscellaneous commands in the running Camel integrations.
+For example there are commands to start and stop routes.
+
+To stop all the routes in the chuck integration, you execute:
+
+[source,bash]
+----
+camel cmd stop-route chuck
+----
+
+And the status will then report the status as _Stopped_ for the chuck integration:
+
+[source,bash]
+----
+camel get route
+  PID   NAME     ID                     FROM                                 STATUS    AGE   TOTAL  FAILED  INFLIGHT  MEAN  MIN  MAX  SINCE-LAST
+ 81663  chuck    chuck                  kamelet://chuck-norris-source        Stopped           600       0         0     0    0    1          4s
+ 81663  chuck    chuck-norris-source-1  timer://chuck?period=10000           Stopped           600       0         0    65   52  290          4s
+ 81663  chuck    log-sink-2             kamelet://source?routeId=log-sink-2  Stopped           600       0         0     0    0    1          4s
+ 83415  bar      route1                 timer://yaml2?period=1000            Started  5m30s    329       0         0     0    0   10          0s
+ 83695  MyCamel  hello                  timer://hello?period=2000            Started  3m52s    116       0         0     0    0    9          1s
+----
+
+To start the routes, you can do:
+
+[source,bash]
+----
+camel cmd start-route chuck
+----
+
+To stop _all_ routes in every Camel integration you need to use the `--all` flag as follows:
+
+[source,bash]
+----
+camel cmd stop-route --all
+----
+
+And you can start _all_ routes using:
+
+[source,bash]
+----
+camel cmd start-route --all
+----
+
+TIP: You can stop one or more route by their ids by separating using
+comma such as: camel cmd start-route --id=route1,hello. Use `camel cmd start-route --help` for more details.
+
+==== Configuring logging levels
+
+You can see the current logging levels of the running Camel integrations by:
+
+[source,bash]
+----
+camel cmd logger
+  PID   NAME   AGE   LOGGER  LEVEL
+ 90857  bar   2m48s  root    INFO
+ 91103  foo     20s  root    INFO
+----
+
+The logging level can be change at runtime, for example to change foo to DEBUG you execute:
+
+[source,bash]
+----
+camel cmd logger --level=DEBUG foo
+----
+
+TIP: You can use `--all` to change logging levels for all running integrations.
+
+==== Listing services
+
+Some Camel integrations may host a service which clients can call, such as REST, or SOAP-WS, or socket-level services using TCP protocols.
+
+You can list the available services as shown in the example below:
+
+[source,bash]
+----
+camel get service
+ PID   NAME       COMPONENT      PROTOCOL  SERVICE
+ 1912  netty      netty          tcp       tcp:localhost:4444
+ 2023  greetings  platform-http  rest      http://0.0.0.0:7777/camel/greetings/{name} (GET)
+ 2023  greetings  platform-http  http      http://0.0.0.0:7777/q/dev
+----
+
+Here you can see 2 Camel integrations. The netty integration hosts a TCP service that is available on port 4444.
+The other Camel integration hosts a REST service that can be called via GET only.
+And finally the integration comes with embedded web console (started with the `--console` option).
+
+NOTE: For a service to be listed then Camel components must be able to advertise the services using xref:camel-console.adoc[].
+
+==== Listing state of Circuit Breakers
+
+If your Camel integration uses xref:components:eips:circuitBreaker-eip.adoc[Circuit Breaker] then
+you can output the status of the breakers with Camel JBang as follows:
+
+[source,bash]
+----
+camel get circuit-breaker
+  PID   NAME  COMPONENT     ROUTE   ID               STATE      PENDING  SUCCESS  FAIL  REJECT
+ 56033  mycb  resilience4j  route1  circuitBreaker1  HALF_OPEN        5        2     3       0
+----
+
+Here we can see the circuit breaker is in _half open_ state, i.e. a state where the breaker is attempting
+to transition back to closed, if the failures start to drop.
+
+TIP: You can run the command with watch to keep showing the latest state `watch camel get circuit-breaker`.
+
+=== Using Jolokia and Hawtio
+
+The https://hawt.io/[Hawtio] web console allows inspecting running Camel integrations, such
+as all the JMX management information, and not but least to visualize the Camel routes
+with live performance metrics. Hawtio is a handy tool for many years, and we have made it
+easy to use Hawtio with Camel JBang.
+
+To let Hawtio able to inspect the Camel integrations, then the Jolokia JVM Agent
+must be installed in the running integration, this can be done, either explicit as follows:
+
+[source,bash]
+----
+camel ps
+  PID   NAME                          READY  STATUS    AGE
+ 61818  sample.camel.MyCamelApplica…   1/1   Running  26m38s
+ 62506  dude.java                      1/1   Running   4m34s
+----
+
+With the PID you can then attach Jolokia:
+
+[source,bash]
+----
+camel jolokia 62506
+Started Jolokia for PID 62506
+http://127.0.0.1:8778/jolokia/
+----
+
+Instead of using PID you can also attach by name pattern. In this example because the
+two Camel integrations have unique names (foo and dude), then you can also attach Jolokia
+without knowing the PID as follows:
+
+[source,bash]
+----
+camel jolokia du
+Started Jolokia for PID 62506
+http://127.0.0.1:8778/jolokia/
+----
+
+Then you can launch https://hawt.io/[Hawtio] using Camel JBang:
+
+[source,bash]
+----
+camel hawtio
+----
+
+This will automatically download and start Hawtio, and open in web browser.
+
+TIP: See `camel hawtio --help` for options.
+
+And when Hawtio launches in the web browser, click the _Discover_ tab which should
+list all the local available Jolokia Agents (yes you can use `camel jolokia PID` to connect
+to multiple different Camel integrations and from this list select which to load).
+
+Click the green _lightning_ icon to connect to running Camel integration (of choice).
+
+You can uninstall the Jolokia JVM Agent in a running Camel integration when no longer needed:
+
+[source,bash]
+----
+camel jolokia 62506 --stop
+Stopped Jolokia for PID 62506
+----
+
+It is also possible to do this with only one command, as follows:
+
+[source,bash]
+----
+camel hawtio dude
+----
+
+Where _dude_ is the name of the running Camel integration. When you stop Hawtio (using `ctrl` + `c`)
+then Camel will attempt to uninstall the Jolokia JVM Agent, however this may not be
+able to do this always, because the JVM is being terminated which can prevent camel-jbang
+from doing JVM process communication to the running Camel integration.
+
+=== Scripting from terminal using pipes
+
+You can also execute a Camel JBang file as a script that can be used for terminal scripting with pipes and filters.
+
+NOTE: Every time the script is executed a JVM is started with Camel. This is not very fast or low on memory usage,
+so use Camel JBang terminal scripting where using Camel makes sense. For example to use the
+many Camel components or Kamelets to more easily send or receive data from disparate IT systems.
+
+This requires to add the following line in top of the file, for example as in the `upper.yaml` file below:
+
+[source,text]
+----
+///usr/bin/env jbang --quiet camel@apache/camel pipe "$0" "$@" ; exit $?
+
+# Will upper-case the input
+- from:
+    uri: "stream:in"
+    steps:
+      - setBody:
+          simple: "${body.toUpperCase()}"
+      - to: "stream:out"
+----
+
+To be able to execute this as a script, you need to set execute file permission:
+
+[source,bash]
+----
+chmod +x upper.yaml
+----
+
+Then you can then execute this as a script:
+
+[source,bash]
+----
+echo "Hello\nWorld" | ./upper.yaml
+----
+
+Which should output:
+
+[source,text]
+----
+HELLO
+WORLD
+----
+
+Logging can be turned on using `--logging=true` which then logs to `.camel-jbang/camel-pipe.log` file.
+The name of the logging file cannot be configured.
+
+[source,bash]
+----
+echo "Hello\nWorld" | ./upper.yaml --logging=true
+----
+
+==== Using stream:in with line vs raw mode
+
+When using `stream:in` to read data from _System in_ then the xref:components::stream-component.adoc[Stream component]
+works in two modes:
+
+- line mode (default) - reads input as single lines (separated by line breaks).
+  Message body is a `String`.
+- raw mode - reads the entire stream until _end of stream_.
+  Message body is a `byte[]`.
+
+IMPORTANT: The default mode is due to historically how the stream component was created.
+Therefore, you may want to set `stream:in?readLine=false` to use raw mode.
+
+=== Running local Kamelets
+
+You can also use Camel JBang to try local Kamelets, without the need to publish them on GitHub or package them in a jar.
+
+[source,bash]
+----
+camel run --local-kamelet-dir=/path/to/local/kamelets earthquake.yaml
+----
+
+TIP: When the kamelets are from local file system, then they can be live reloaded, if they are updated, when you run
+Camel JBang in `--dev` mode.
+
+You can also point to a folder in a GitHub repository. For example, we have provided some custom Kamelets
+at https://github.com/apache/camel-kamelets-examples/tree/main/custom-kamelets which can be used easily:
+
+[source,bash]
+----
+camel run --local-kamelet-dir=https://github.com/apache/camel-kamelets-examples/tree/main/custom-kamelets user.java
+----
+
+NOTE: If a kamelet is loaded from GitHub, then they cannot be live reloaded.
+
+=== Using platform-http component
+
+When a route is started from `platform-http` then Camel JBang will automatically include a VertX HTTP server
+running on port 8080. For example the following route in a file named `server.yaml`:
+
+[source,yaml]
+----
+- from:
+    uri: "platform-http:/hello"
+    steps:
+      - set-body:
+          constant: "Hello World"
+----
+
+Can be run with
+
+[source,bash]
+----
+camel run server.yaml
+----
+
+And you can call the HTTP service with:
+
+[source,bash]
+----
+$ curl http://localhost:8080/hello
+Hello World%
+----
+
+=== Using Java beans and processors
+
+There is basic support for including regular Java source files together with Camel routes,
+and let Camel JBang runtime compile the Java source. This means you can include smaller utility
+classes, POJOs, Camel Processors and whatnot that the application needs.
+
+IMPORTANT: The Java source files cannot use package names. This may change in the future.
+
+=== Dependency Injection in Java classes
+
+When running Camel integrations with camel-jbang, then the runtime is `camel-main` based. This means
+there is no Spring Boot, or Quarkus available. However, we have added support for using annotation
+based dependency injection in Java classes.
+
+==== Using Camel dependency injection
+
+You can use the following Camel annotations on Camel standalone:
+
+- `@org.apache.camel.BindToRegistry` on class level to create an instance of the class and register in the xref:registry.adoc[Registry].
+- `@org.apache.camel.Configuration` on class level to create an instance of the class and register in the xref:registry.adoc[Registry].
+
+And these annotations should work on all runtimes
+(if target runtime is either Quarkus or Spring Boot then favour using their annotations):
+
+- `@org.apache.camel.BeanInject` to dependency inject a bean on a class field.
+- `@org.apache.camel.PropertyInject` to inject a xref:using-propertyplaceholder.adoc[property placeholder]. Such as a property defined in `application.properties`.
+- `@org.apache.camel.BindToRegistry` on a method to create a bean by invoking the method.
+- `@org.apache.camel.Converter` on class level to auto-register the xref:type-converter.adoc[type converters] from the class.
+
+==== Using Spring Boot dependency injection
+
+You can use the following Spring Boot annotations:
+
+- `@org.springframework.stereotype.Component` or `@org.springframework.stereotype.Service` on class level to create an instance of the class and register in the xref:registry.adoc[Registry].
+- `@org.springframework.beans.factory.annotation.Autowired` to dependency inject a bean on a class field. `@org.springframework.beans.factory.annotation.Qualifier` can be used to specify the bean id.
+- `@org.springframework.beans.factory.annotation.Value` to inject a xref:using-propertyplaceholder.adoc[property placeholder]. Such as a property defined in `application.properties`.
+- `@org.springframework.context.annotation.Bean` on a method to create a bean by invoking the method.
+
+==== Using Quarkus injection
+
+You can use the following Quarkus annotations:
+
+- `@javax.enterprise.context.ApplicationScoped` or `@javax.inject.Singleton` on class level to create an instance of the class and register in the xref:registry.adoc[Registry]. `@javax.inject.Named` can be used to specify the bean id.
+- `@javax.inject.Inject` to dependency inject a bean on a class field. `@javax.inject.Named` can be used to specify the bean id.
+- `@org.eclipse.microprofile.config.inject.ConfigProperty` to inject a xref:using-propertyplaceholder.adoc[property placeholder]. Such as a property defined in `application.properties`.
+- `@javax.enterprise.inject.Produces` on a method to create a bean by invoking the method. `@javax.inject.Named` can be used to specify the bean id.
+
+=== Debugging
+
+There are two kinds of debugging:
+
+* _Java debugging_ - Java code debugging (Standard Java)
+* _Camel route debugging_ - Debugging Camel routes (requires Camel tooling plugins)
+
+==== Java debugging
+
+You can debug your integration scripts by making use of the `--debug` flag provided by JBang.
+However, due to Java debugging must be enabled when starting the JVM, then you must do this
+using the `jbang` command, instead of `camel` as shown:
+
+[source,bash]
+----
+jbang --debug  camel@apache/camel run hello.yaml
+Listening for transport dt_socket at address: 4004
+----
+
+As you can see the default listening port is 4004 but can be configured as described in https://www.jbang.dev/documentation/guide/latest/debugging.html[JBang Debugging].
+
+This is a standard Java debug socket. You can then use the IDE of your choice. For instance, see the generic documentation for https://www.jetbrains.com/help/idea/attaching-to-local-process.html#create-rc[IntelliJ], https://code.visualstudio.com/docs/java/java-debugging#_attach[VS Code] and https://www.vogella.com/tutorials/EclipseDebugging/article.html#remote-debugging[Eclipse Desktop]. You will surely want to add `Processor` to be able to put breakpoints hit during route execution (as opposed to route definition creation).
+
+==== Camel route debugging
+
+The Camel route debugger is available by default (the `camel-debug` component is automatically added to the classpath). By default, it can be reached through JMX at the URL `service:jmx:rmi:///jndi/rmi://localhost:1099/jmxrmi/camel`.
+
+You can then use the Integrated Development Environment (IDE) of your choice. For instance https://plugins.jetbrains.com/plugin/9371-apache-camel[IntelliJ], https://marketplace.visualstudio.com/items?itemName=redhat.vscode-debug-adapter-apache-camel[VS Code] or https://marketplace.eclipse.org/content/textual-debugging-apache-camel[Eclipse Desktop].
+
+A specific how-to is available for VS Code, see this https://youtu.be/owNhWxf42qk[video] or this /blog/2022/05/start-camel-quarkus-application-with-camel-textual-debug-in-vscode/[blogpost].
+
+==== Health Checks
+
+The status of health checks can be accessed via Camel JBang from the CLI as follows:
+
+[source,bash]
+----
+camel get health
+  PID   NAME    AGE  ID             RL  STATE  RATE    SINCE   MESSAGE
+ 61005  mybind   8s  camel/context   R   UP    2/2/-  1s/3s/-
+----
+
+Here we can see the Camel is _UP_. The application has just been running for 8 seconds, and the
+has been 2 health checks invoked.
+
+The output is showing the _default_ level of checks as:
+
+- `CamelContext` health check
+- Component specific health checks (such as from `camel-kafka` or `camel-aws`, ...)
+- Custom health checks
+- Any check which are not UP
+
+The _RATE_ column shows 3 numbers separated by `/`. So `2/2/-` means 2 checks in total, 2 success, - no failures.
+The two last columns will reset when a health check changes state as this number is the number of consecutive
+checks that was successful or failure. So if the health check starts to fail then the numbers could be:
+
+[source,bash]
+----
+camel get health
+  PID   NAME     AGE   ID             RL  STATE   RATE    SINCE    MESSAGE
+ 61005  mybind   3m2s  camel/context   R   UP    77/-/3  1s/-/17s  some kind of error
+----
+
+Here we can see the numbers is changed to `77/-/3`. This means the total is 77. There is no success, but
+the check has been failing 3 times in a row. The _SINCE_ column corresponds to the _RATE_. So in this
+case we can see the last check was 1 second ago, and that the check has been failing for 17 second in a row.
+
+You can use `--level=full` to output every health checks; which will include consumer and route level checks
+as well.
+
+A health check may often be failed due to an exception was thrown which can be shown via `--trace` flag:
+
+[source,bash]
+----
+camel get health --trace
+  PID   NAME      AGE   ID                                      RL  STATE    RATE       SINCE     MESSAGE
+ 61038  mykafka  6m19s  camel/context                            R   UP    187/187/-  1s/6m16s/-
+ 61038  mykafka  6m19s  camel/kafka-consumer-kafka-not-secure…   R  DOWN   187/-/187  1s/-/6m16s  KafkaConsumer is not ready - Error: Invalid url in bootstrap.servers: value
+
+
+------------------------------------------------------------------------------------------------------------------------
+                                                       STACK-TRACE
+------------------------------------------------------------------------------------------------------------------------
+	PID: 61038
+	NAME: mykafka
+	AGE: 6m19s
+	CHECK-ID: camel/kafka-consumer-kafka-not-secured-source-1
+	STATE: DOWN
+	RATE: 187
+	SINCE: 6m16s
+	METADATA:
+		bootstrap.servers = value
+		group.id = 7d8117be-41b4-4c81-b4df-cf26b928d38a
+		route.id = kafka-not-secured-source-1
+		topic = value
+	MESSAGE: KafkaConsumer is not ready - Error: Invalid url in bootstrap.servers: value
+	org.apache.kafka.common.KafkaException: Failed to construct kafka consumer
+		at org.apache.kafka.clients.consumer.KafkaConsumer.<init>(KafkaConsumer.java:823)
+		at org.apache.kafka.clients.consumer.KafkaConsumer.<init>(KafkaConsumer.java:664)
+		at org.apache.kafka.clients.consumer.KafkaConsumer.<init>(KafkaConsumer.java:645)
+		at org.apache.kafka.clients.consumer.KafkaConsumer.<init>(KafkaConsumer.java:625)
+		at org.apache.camel.component.kafka.DefaultKafkaClientFactory.getConsumer(DefaultKafkaClientFactory.java:34)
+		at org.apache.camel.component.kafka.KafkaFetchRecords.createConsumer(KafkaFetchRecords.java:241)
+		at org.apache.camel.component.kafka.KafkaFetchRecords.createConsumerTask(KafkaFetchRecords.java:201)
+		at org.apache.camel.support.task.ForegroundTask.run(ForegroundTask.java:123)
+		at org.apache.camel.component.kafka.KafkaFetchRecords.run(KafkaFetchRecords.java:125)
+		at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
+		at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+		at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
+		at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
+		at java.base/java.lang.Thread.run(Thread.java:829)
+	Caused by: org.apache.kafka.common.config.ConfigException: Invalid url in bootstrap.servers: value
+		at org.apache.kafka.clients.ClientUtils.parseAndValidateAddresses(ClientUtils.java:59)
+		at org.apache.kafka.clients.ClientUtils.parseAndValidateAddresses(ClientUtils.java:48)
+		at org.apache.kafka.clients.consumer.KafkaConsumer.<init>(KafkaConsumer.java:730)
+		... 13 more
+----
+
+Here we can easily see that the health check is failing because of the `org.apache.kafka.common.config.ConfigException`
+which is due to invalid configuration: `Invalid url in bootstrap.servers: value`.
+
+TIP: Use `camel get health --help` to see all the various options.
+
+== Listing what Camel components is available
+
+Camel comes with a lot of artifacts out of the box which comes as:
+
+- components
+- data formats
+- expression languages
+- miscellaneous components
+- kamelets
+
+You can use the Camel CLI to list what Camel provides via the `camel catalog` command.
+For example to list all the components
+
+[source,bash]
+----
+camel catalog components
+----
+
+And to see which Kamelets are available:
+
+[source,bash]
+----
+camel catalog kamelets
+----
+
+TIP: Use `camel catalog --help` to see all possible commands.
+
+=== Displaying component documentation
+
+The `doc` goal can show quick documentation for every component, dataformat, kamelets etc.
+For example to see the kafka component you run:
+
+[source,bash]
+----
+camel doc kafka
+----
+
+NOTE: The documentation is not the full documentation as shown on the website, as the Camel CLI does not have direct
+access to this information and can only show a basic description of the component, but include tables for every
+configuration option.
+
+To see the documentation for jackson dataformat:
+
+[source,bash]
+----
+camel doc jackson
+----
+
+In some rare cases then there may be a component and dataformat with the same name, and the `doc` goal prioritizes
+components. In such a situation you can prefix the name with dataformat, i.e:
+
+[source,bash]
+----
+camel doc dataformat:thrift
+----
+
+You can also see the kamelet documentation such as shown:
+
+[source,bash]
+----
+camel doc aws-kinesis-sink
+----
+
+==== Browsing online documentation from the Camel website
+
+You can use the `doc` command to quickly open the url in the web browser for the online documentation.
+For example to browse the kafka component, you use `--open-url`:
+
+[source,bash]
+----
+camel doc kafka --open-url
+----
+
+This also works for data formats, languages, kamelets etc.
+
+[source,bash]
+----
+camel doc aws-kinesis-sink --open-url
+----
+
+TIP: To just get the link to the online documentation, then use `camel doc kafka --url`.
+
+==== Filtering options listed in the tables
+
+Some components may have many options, and in such cases you may use `--filter` to only list options that match the filter
+in either name, description, or the group (producer, security, advanced etc).
+
+For example to list only security related options:
+
+[source,bash]
+----
+camel doc kafka --filter=security
+----
+
+And to list only something about _timeout_:
+
+[source,bash]
+----
+camel doc kafka --filter=timeout
+----
+
+== Open API
+
+Camel JBang allows to quickly expose an Open API service using _contract first_ approach,
+where you have an existing OpenAPI specification file.
+
+Then Camel JBang is able to bridge each API endpoints from the OpenAPI specification to
+a Camel route with the naming convention `direct:<operationId>`.
+
+This make it quick to implement a Camel route for a given operation.
+
+See the https://github.com/apache/camel-kamelets-examples/tree/main/jbang/open-api[open-api example] for more details.
+
+== Gathering list of dependencies
+
+When working with Camel JBang then dependencies are automatically resolved. This means that
+you do not have to use a build system like Maven or Gradle to add every Camel components
+as a dependency.
+
+However, you may want to know what dependencies are required to run the Camel integration.
+To see this, you can use the `dependencies` command. The command output does not output a detailed
+tree, such as `mvn dependencies:tree`, as the output is intended to list which Camel components,
+and other JARs needed (when using Kamelets).
+
+The dependency output by default is _vanilla_ Apache Camel with the camel-main as runtime, as shown below:
+
+[source,bash]
+----
+camel dependencies
+org.apache.camel:camel-dsl-modeline:3.20.0
+org.apache.camel:camel-health:3.20.0
+org.apache.camel:camel-kamelet:3.20.0
+org.apache.camel:camel-log:3.20.0
+org.apache.camel:camel-rest:3.20.0
+org.apache.camel:camel-stream:3.20.0
+org.apache.camel:camel-timer:3.20.0
+org.apache.camel:camel-yaml-dsl:3.20.0
+org.apache.camel.kamelets:camel-kamelets-utils:0.9.3
+org.apache.camel.kamelets:camel-kamelets:0.9.3
+----
+
+The output is by default a line per maven dependency in GAV format (_groupId:artifactId:version_).
+
+You can also specify the output should be in _Maven format_ as shown:
+
+[source,bash]
+----
+camel dependencies --output=maven
+<dependency>
+    <groupId>org.apache.camel</groupId>
+    <artifactId>camel-main</artifactId>
+    <version>3.20.0</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.camel</groupId>
+    <artifactId>camel-dsl-modeline</artifactId>
+    <version>3.20.0</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.camel</groupId>
+    <artifactId>camel-health</artifactId>
+    <version>3.20.0</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.camel</groupId>
+    <artifactId>camel-kamelet</artifactId>
+    <version>3.20.0</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.camel</groupId>
+    <artifactId>camel-log</artifactId>
+    <version>3.20.0</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.camel</groupId>
+    <artifactId>camel-rest</artifactId>
+    <version>3.20.0</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.camel</groupId>
+    <artifactId>camel-stream</artifactId>
+    <version>3.20.0</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.camel</groupId>
+    <artifactId>camel-timer</artifactId>
+    <version>3.20.0</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.camel</groupId>
+    <artifactId>camel-yaml-dsl</artifactId>
+    <version>3.20.0</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.camel.kamelets</groupId>
+    <artifactId>camel-kamelets-utils</artifactId>
+    <version>0.9.3</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.camel.kamelets</groupId>
+    <artifactId>camel-kamelets</artifactId>
+    <version>0.9.3</version>
+</dependency>
+----
+
+You can also choose the target runtime as either _quarkus_ or _spring-boot_ as shown:
+
+[source,bash]
+----
+camel dependencies --runtime=spring-boot
+org.springframework.boot:spring-boot-starter-actuator:2.7.5
+org.springframework.boot:spring-boot-starter-web:2.7.5
+org.apache.camel.springboot:camel-spring-boot-engine-starter:3.20.0
+org.apache.camel.springboot:camel-dsl-modeline-starter:3.20.0
+org.apache.camel.springboot:camel-kamelet-starter:3.20.0
+org.apache.camel.springboot:camel-log-starter:3.20.0
+org.apache.camel.springboot:camel-rest-starter:3.20.0
+org.apache.camel.springboot:camel-stream-starter:3.20.0
+org.apache.camel.springboot:camel-timer-starter:3.20.0
+org.apache.camel.springboot:camel-yaml-dsl-starter:3.20
+org.apache.camel.kamelets:camel-kamelets-utils:0.9.3
+org.apache.camel.kamelets:camel-kamelets:0.9.3
+----
+
+== Creating Projects
+
+You can _export_ your Camel JBang integration to a traditional Java based project such as Spring Boot or Quarkus.
+
+You may want to do this after you have built a prototype using Camel JBang, and are in need
+of a traditional Java based project with more need for Java coding, or wanting to use the powerful
+runtimes of Spring Boot, Quarkus or vanilla Camel Main.
+
+=== Exporting to Camel Spring Boot
+
+The command `export --runtime=spring-boot` will export your current Camel JBang file(s) to a Maven based
+Spring Boot project with files organized in `src/main/` folder structure.
+
+For example to export to Spring Boot using the Maven groupId _com.foo_ and the artifactId _acme_
+and with version _1.0-SNAPSHOT_ you simply execute:
+
+[source,bash]
+----
+camel export --runtime=spring-boot --gav=com.foo:acme:1.0-SNAPSHOT
+----
+
+NOTE: This will export to the _current_ directory, meaning that files are moved into the needed folder structure.
+
+To export to another directly (copies the files) you execute:
+
+[source,bash]
+----
+camel export --runtime=spring-boot --gav=com.foo:acme:1.0-SNAPSHOT --directory=../myproject
+----
+
+When exporting to Spring Boot then the Camel version defined in the `pom.xml` or `build.gradle` is
+the same version as Camel JBang uses. However, you can specify the Camel version as shown below:
+
+[source,bash]
+----
+camel export --runtime=spring-boot --gav=com.foo:acme:1.0-SNAPSHOT --directory=../myproject --camel-spring-boot-version=3.18.3
+----
+
+TIP: See the possible options by running: `camel export --help` for more details.
+
+=== Exporting to Camel Quarkus
+
+The command `export --runtime=quarkus` will export your current Camel JBang file(s) to a Maven based
+Quarkus project with files organized in `src/main/` folder structure.
+
+For example to export to Quarkus using the Maven groupId _com.foo_ and the artifactId _acme_
+and with version _1.0-SNAPSHOT_ you simply execute:
+
+[source,bash]
+----
+camel export --runtime=quarkus --gav=com.foo:acme:1.0-SNAPSHOT
+----
+
+NOTE: This will export to the _current_ directory, meaning that files are moved into the needed folder structure.
+
+To export to another directly (copies the files) you execute:
+
+[source,bash]
+----
+camel export --runtime=quarkus --gav=com.foo:acme:1.0-SNAPSHOT --directory=../myproject
+----
+
+TIP: See the possible options by running: `camel export --help` for more details.
+
+=== Exporting to Camel Main
+
+The command `export --runtime=camel-main` will export your current Camel JBang file(s) to a Maven based
+vanilla Camel Main project with files organized in `src/main/` folder structure.
+
+For example to export to Camel Main using the Maven groupId _com.foo_ and the artifactId _acme_
+and with version _1.0-SNAPSHOT_ you simply execute:
+
+[source,bash]
+----
+camel export --runtime=camel-main --gav=com.foo:acme:1.0-SNAPSHOT
+----
+
+NOTE: This will export to the _current_ directory, meaning that files are moved into the needed folder structure.
+
+To export to another directly (copies the files) you execute:
+
+[source,bash]
+----
+camel export --runtime=camel-main --gav=com.foo:acme:1.0-SNAPSHOT --directory=../myproject
+----
+
+TIP: See the possible options by running: `camel export --help` for more details.
+
+=== Exporting as Gradle Project
+
+Camel JBang exports by default as a Maven based project. To use Gradle instead, you can
+specify the `--build-tool=gradle` when exporting, such as:
+
+[source,bash]
+----
+camel export --build-tool=gradle --runtime=spring-boot --gav=com.foo:acme:1.0-SNAPSHOT --directory=../myproject
+----
+
+=== Exporting with JMX management included
+
+Usually when exporting to Spring Boot, Quarkus or Camel Main, then JMX management is not included out of the box.
+To include JMX, you need to add `camel:management` in the `--deps` option, as shown below:
+
+[source,bash]
+----
+camel export --runtime=quarkus --gav=com.foo:acme:1.0-SNAPSHOT --deps=camel:management --directory=../myproject
+----
+
+=== Exporting with Camel CLI included
+
+Usually when exporting to Spring Boot, Quarkus or Camel Main, then Camel JBang CLI is not included out of the box.
+To be able to continue to use Camel CLI (i.e. `camel`), you need to add `camel:cli-connector` in the `--deps` option, as shown below:
+
+[source,bash]
+----
+camel export --runtime=quarkus --gav=com.foo:acme:1.0-SNAPSHOT --deps=camel:cli-connector --directory=../myproject
+----
+
+=== Configuring exporting
+
+The export command will by default load configuration from `application.properties`
+which also can be used to specific parameters for export such as selecting the runtime and java version.
+
+The follow options related to _exporting_, can be configured in `application.properties`:
+
+|===
+|Option | Description
+
+|`camel.jbang.runtime`
+|Runtime (spring-boot, quarkus, or camel-main)
+
+|`camel.jbang.gav`
+|The Maven group:artifact:version
+
+|`camel.jbang.dependencies`
+|Additional dependencies (Use commas to separate multiple dependencies). See more details at xref:_adding_custom_jars[].
+
+|`camel.jbang.javaVersion`
+|Java version (11 or 17)
+
+|`camel.jbang.kameletsVersion`
+|Apache Camel Kamelets version
+
+|`camel.jbang.localKameletDir`
+|Local directory for loading Kamelets
+
+|`camel.jbang.camelSpringBootVersion`
+|Camel version to use with Spring Boot
+
+|`camel.jbang.springBootVersion`
+|Spring Boot version
+
+|`camel.jbang.quarkusGroupId`
+|Quarkus Platform Maven groupId
+
+|`camel.jbang.quarkusArtifactId`
+|Quarkus Platform Maven artifactId
+
+|`camel.jbang.quarkusVersion`
+|Quarkus Platform version
+
+|`camel.jbang.mavenWrapper`
+|Include Maven Wrapper files in exported project
+
+|`camel.jbang.gradleWrapper`
+|Include Gradle Wrapper files in exported project
+
+|`camel.jbang.buildTool`
+|Build tool to use (maven or gradle)
+
+|`camel.jbang.repos`
+|Additional maven repositories for download on-demand (Use commas to separate multiple repositories)
+
+|`camel.jbang.mavenSettings`
+|Optional location of maven setting.xml file to configure servers, repositories, mirrors and proxies. If set to false, not even the default ~/.m2/settings.xml will be used.
+
+|`camel.jbang.mavenSettingsSecurity`
+|Optional location of maven settings-security.xml file to decrypt settings.xml
+
+|`camel.jbang.exportDir`
+|Directory where the project will be exported
+|===
+
+NOTE: These are options from the export command, so you can see mor details and default values using `camel export --help`.
+
+
+== Troubleshooting
+
+When using https://www.jbang.dev/[JBang] then JBang stores state in `~/.jbang` directory.
+This is also the location where JBang stores downloaded JARs.
+
+Camel JBang also downloads needed dependencies while running. However, these dependencies
+are downloaded to your local Maven repository `~/.m2`.
+
+So if you find problems with running Camel JBang using what is seems like an outdated JAR, then you can
+try to delete these directories, or parts of it.

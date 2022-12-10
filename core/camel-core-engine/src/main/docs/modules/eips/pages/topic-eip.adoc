@@ -1,0 +1,44 @@
+= Topic EIP
+:doctitle: Topic
+:shortname: topic
+:description: Topic which sends to all destinations.
+:since: 
+:supportlevel: Stable
+
+Topic mode for the xref:loadBalance-eip.adoc[Load Balancer] EIP.
+With this policy then all destination is selected.
+
+== Options
+
+// eip options: START
+include::partial$eip-options.adoc[]
+// eip options: END
+
+== Examples
+
+In this example we send the message to all three endpoints:
+
+[source,java]
+----
+from("direct:start")
+    .loadBalance().topic()
+        .to("seda:x")
+        .to("seda:y")
+        .to("seda:z")
+    .end();
+----
+
+In XML you'll have a route like this:
+
+[source,xml]
+----
+<route>
+<from uri="direct:start"/>
+    <loadBalance>
+       <topic/>
+       <to uri="seda:x"/>      
+       <to uri="seda:y"/>      
+       <to uri="seda:z"/>       
+    </loadBalance> 
+</route>
+----

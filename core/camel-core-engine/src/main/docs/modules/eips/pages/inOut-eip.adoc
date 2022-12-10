@@ -1,0 +1,18 @@
+= In Out EIP (deprecated)
+:doctitle: In Out
+:shortname: inOut
+:description: Marks the exchange pattern for the route to request/reply
+:since: 
+:supportlevel: Stable-deprecated
+:deprecated: *deprecated*
+
+The *inOut:* EIP define an InOut ExchangePattern.
+
+WARNING: inOut is deprecated. Use xref:event-message.adoc[setExchangePattern] instead.
+
+
+== EIP options
+
+// eip options: START
+include::partial$eip-options.adoc[]
+// eip options: END

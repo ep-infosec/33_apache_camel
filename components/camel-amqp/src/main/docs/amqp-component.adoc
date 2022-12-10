@@ -1,0 +1,172 @@
+= AMQP Component
+:doctitle: AMQP
+:shortname: amqp
+:artifactid: camel-amqp
+:description: Messaging with AMQP protocol using Apache QPid Client.
+:since: 1.2
+:supportlevel: Stable
+:component-header: Both producer and consumer are supported
+//Manually maintained attributes
+:camel-spring-boot-name: amqp
+
+*Since Camel {since}*
+
+*{component-header}*
+
+The AMQP component supports the
+http://www.amqp.org/[AMQP 1.0 protocol]
+using the JMS Client API of the http://qpid.apache.org/[Qpid]
+project.
+
+Maven users will need to add the following dependency to their `pom.xml`
+for this component:
+
+[source,xml]
+----
+<dependency>
+    <groupId>org.apache.camel</groupId>
+    <artifactId>camel-amqp</artifactId>
+    <version>${camel.version}</version> <!-- use the same version as your Camel core version -->
+</dependency>
+----
+
+== URI format
+
+[source,java]
+----
+amqp:[queue:|topic:]destinationName[?options]
+----
+
+// component-configure options: START
+
+// component-configure options: END
+
+// component options: START
+include::partial$component-configure-options.adoc[]
+include::partial$component-endpoint-options.adoc[]
+// component options: END
+
+// endpoint options: START
+
+// endpoint options: END
+
+
+
+== Usage
+
+As AMQP component is inherited from JMS component, the usage of the
+former is almost identical to the latter:
+
+*Using AMQP component*
+
+[source,java]
+----
+// Consuming from AMQP queue
+from("amqp:queue:incoming").
+  to(...);
+ 
+// Sending message to the AMQP topic
+from(...).
+  to("amqp:topic:notify");
+----
+
+== Configuring AMQP component
+
+*Creating AMQP 1.0 component*
+
+[source,java]
+----
+AMQPComponent amqp = AMQPComponent.amqpComponent("amqp://localhost:5672");
+ 
+AMQPComponent authorizedAmqp = AMQPComponent.amqpComponent("amqp://localhost:5672", "user", "password");
+----
+
+You can also add an instance
+of `org.apache.camel.component.amqp.AMQPConnectionDetails` to the
+registry in order to automatically configure the AMQP component. For example for Spring Boot you just have to define bean:
+
+*AMQP connection details auto-configuration*
+
+[source,java]
+----
+@Bean
+AMQPConnectionDetails amqpConnection() {
+  return new AMQPConnectionDetails("amqp://localhost:5672"); 
+}
+ 
+@Bean
+AMQPConnectionDetails securedAmqpConnection() {
+  return new AMQPConnectionDetails("amqp://localhost:5672", "username", "password"); 
+}
+----
+
+Likewise, you can also use CDI producer methods when using Camel-CDI
+
+*AMQP connection details auto-configuration for CDI*
+
+[source,java]
+----
+@Produces
+AMQPConnectionDetails amqpConnection() {
+  return new AMQPConnectionDetails("amqp://localhost:5672");
+}
+----
+
+You can also rely on the xref:properties-component.adoc[Camel properties] to read
+the AMQP connection details. Factory
+method `AMQPConnectionDetails.discoverAMQP()` attempts to read Camel
+properties in a Kubernetes-like convention, just as demonstrated on the
+snippet below:
+
+*AMQP connection details auto-configuration*
+
+[source,java]
+----
+export AMQP_SERVICE_HOST = "mybroker.com"
+export AMQP_SERVICE_PORT = "6666"
+export AMQP_SERVICE_USERNAME = "username"
+export AMQP_SERVICE_PASSWORD = "password"
+ 
+...
+ 
+@Bean
+AMQPConnectionDetails amqpConnection() {
+  return AMQPConnectionDetails.discoverAMQP(); 
+}
+----
+
+*Enabling AMQP specific options*
+
+If you, for example, need to enable `amqp.traceFrames` you can do that by appending the option to your URI, like the following example:
+
+[source,java]
+----
+AMQPComponent amqp = AMQPComponent.amqpComponent("amqp://localhost:5672?amqp.traceFrames=true");
+----
+
+For reference take a look at the https://qpid.apache.org/releases/qpid-jms-1.7.0/docs/index.html[QPID JMS client configuration]
+
+== Using topics
+
+To have using topics working with `camel-amqp` you need to configure the
+component to use `topic://` as topic prefix, as shown below:
+
+[source,xml]
+----
+ <bean id="amqp" class="org.apache.camel.component.amqp.AmqpComponent">
+   <property name="connectionFactory">
+     <bean class="org.apache.qpid.jms.JmsConnectionFactory" factory-method="createFromURL">
+       <property name="remoteURI" value="amqp://localhost:5672" />
+       <property name="topicPrefix" value="topic://" />  <!-- only necessary when connecting to ActiveMQ over AMQP 1.0 -->
+     </bean>
+   </property>
+ </bean>
+----
+
+Keep in mind that both  `AMQPComponent#amqpComponent()` methods and
+`AMQPConnectionDetails` pre-configure the component with the topic
+prefix, so you don't have to configure it explicitly.
+
+
+
+include::spring-boot:partial$starter.adoc[]

@@ -1,0 +1,1 @@
+../../../../../../../../../../../../../../../../components/camel-test/camel-test/src/test/java/org/apache/camel/test/patterns/IsMockEndpointsJUnit4Test.java
